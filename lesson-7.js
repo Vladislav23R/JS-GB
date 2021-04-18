@@ -1,3 +1,7 @@
+// 1. Выводить счёт в режиме реального времени.
+// 2. Генерировать временные препятствия на поле.
+
+
 "use strict";
 const settings = {
     rowsCount: 21,
@@ -86,7 +90,7 @@ const map = {
 
     },
 
-    render(snakePointsArray, foodPoint) {
+    render(snakePointsArray, foodPoint, obstructionPoint) {
         for (const cell of this.usedCells) {
             cell.className = 'cell';
         }
@@ -102,6 +106,10 @@ const map = {
         const foodCell = this.cells[`x${foodPoint.x}_y${foodPoint.y}`];
         foodCell.classList.add('food');
         this.usedCells.push(foodCell);
+
+        const obstructionCell = this.cells[`x${obstructionPoint.x}_y${obstructionPoint.y}`];
+        obstructionCell.classList.add('obstruction');
+        this.usedCells.push(obstructionCell);
     }
 };
 
@@ -138,9 +146,9 @@ const snake = {
         const lastBodyIdx = this.body.length - 1;
         const lastBodyPoint = this.body[lastBodyIdx];
         const lastBodyPointClone = Object.assign({}, lastBodyPoint); // {...lastBodyPoint}
-
         this.body.push(lastBodyPointClone);
     },
+
 
     getNextStepHeadPoint() {
         const firstPoint = this.getBody()[0];
@@ -163,6 +171,27 @@ const snake = {
 };
 
 const food = {
+    x: null,
+    y: null,
+
+    getCoordinates() {
+        return {
+            x: this.x,
+            y: this.y,
+        };
+    },
+
+    setCoordinates(point) {
+        this.x = point.x;
+        this.y = point.y;
+    },
+
+    isOnPoint(point) {
+        return this.x === point.x && this.y === point.y;
+    },
+};
+
+const obstruction = {
     x: null,
     y: null,
 
@@ -212,8 +241,10 @@ const game = {
     map,
     snake,
     food,
+    obstruction,
     status,
     tickInterval: null,
+    score: document.getElementById('score'), // ДЗ 1
 
     init(userSettings = {}) {
         this.config.init(userSettings);
@@ -235,7 +266,9 @@ const game = {
     reset() {
         this.stop();
         this.snake.init(this.getStartSnakeBody(), 'up');
-        this.food.setCoordinates(this.getRandomFreeCoordinates());
+        this.food.setCoordinates(this.getRandomFreeCoordinates(this.food));
+        this.obstruction.setCoordinates(this.getRandomFreeCoordinates(this.obstruction));
+        this.score.innerHTML = 0; // ДЗ 1
         this.render();
     },
 
@@ -246,8 +279,8 @@ const game = {
         }];
     },
 
-    getRandomFreeCoordinates() {
-        const exclude = [this.food.getCoordinates(), ...this.snake.getBody()];
+    getRandomFreeCoordinates(obj) {
+        const exclude = [`this.$obj.getCoordinates()`, ...this.snake.getBody()];
 
         while (true) {
             const rndPoint = {
@@ -290,20 +323,24 @@ const game = {
     },
 
     tickHandler() {
-        if (!this.canMakeStep()) {
+        if (!this.canMakeStep() || this.obstruction.isOnPoint(this.snake.getNextStepHeadPoint())) { // ДЗ 2 ---------------------
             return this.finish();
         }
 
         if (this.food.isOnPoint(this.snake.getNextStepHeadPoint())) {
             this.snake.growUp();
-            this.food.setCoordinates(this.getRandomFreeCoordinates());
+            document.getElementById('score').innerHTML = 'Score: ' + (this.snake.body.length - 1); // ДЗ 1 -----------------
+            this.food.setCoordinates(this.getRandomFreeCoordinates(this.food));
+            this.obstruction.setCoordinates(this.getRandomFreeCoordinates(this.obstruction)); // ДЗ 2 ---------------------
 
             if (this.isGameWon()) this.finish();
         }
 
+
         this.snake.makeStep();
         this.render();
     },
+
 
     canMakeStep() {
         const nextHeadPoint = this.snake.getNextStepHeadPoint();
@@ -376,7 +413,7 @@ const game = {
     },
 
     render() {
-        this.map.render(this.snake.getBody(), this.food.getCoordinates());
+        this.map.render(this.snake.getBody(), this.food.getCoordinates(), this.obstruction.getCoordinates());
     }
 };
 
