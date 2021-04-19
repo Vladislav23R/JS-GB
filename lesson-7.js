@@ -280,7 +280,7 @@ const game = {
     },
 
     getRandomFreeCoordinates(obj) {
-        const exclude = [`this.$obj.getCoordinates()`, ...this.snake.getBody()];
+        const exclude = [`this.${obj}.getCoordinates()`, ...this.snake.getBody()];
 
         while (true) {
             const rndPoint = {
